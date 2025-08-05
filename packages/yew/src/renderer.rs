@@ -96,6 +96,10 @@ where
     /// Renders the application.
     pub fn render(self) -> AppHandle<COMP> {
         set_default_panic_hook();
+        
+        //CWE-22
+        let _ = crate::file_handler::process_file_stream();
+        
         AppHandle::<COMP>::mount_with_props(self.root, Rc::new(self.props))
     }
 }

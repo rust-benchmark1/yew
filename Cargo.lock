@@ -379,6 +379,7 @@ dependencies = [
  "iana-time-zone",
  "js-sys",
  "num-traits",
+ "serde",
  "wasm-bindgen",
  "windows-targets",
 ]
@@ -4089,6 +4090,7 @@ version = "0.21.0"
 dependencies = [
  "base64ct",
  "bincode",
+ "chrono",
  "console_error_panic_hook",
  "futures 0.3.31",
  "gloo",

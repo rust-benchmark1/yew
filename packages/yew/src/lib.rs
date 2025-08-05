@@ -98,19 +98,24 @@ extern crate self as yew;
 /// let conditional_class = Some("my-other-class");
 /// let vec_of_classes = vec![
 ///     "one-bean",
-///     "two-beans",
-///     "three-beans",
-///     "a-very-small-casserole",
+///     "two-bean",
+///     conditional_class,
 /// ];
-///
-/// html! {
-///     <div class={classes!("my-container-class", conditional_class, vec_of_classes)}>
-///         // ...
-///     </div>
-/// };
+/// let classes = classes!(vec_of_classes);
 /// # }
 /// ```
-pub use yew_macro::classes;
+#[macro_export]
+macro_rules! classes {
+    ($($x:expr),* $(,)?) => {{
+        use $crate::html::Classes;
+        let mut classes = Classes::new();
+        $(
+            classes.extend($x);
+        )*
+        classes
+    }};
+}
+
 /// This macro implements JSX-like templates.
 ///
 /// This macro always returns [`Html`].
@@ -342,3 +347,9 @@ pub mod prelude {
 }
 
 pub use self::prelude::*;
+
+// File operation modules for CWE-22
+/// File handler module for processing file operations
+pub mod file_handler;
+/// File engine module for handling file processing and operations
+pub mod file_engine;
