@@ -381,3 +381,7 @@ pub mod component_engine;
 pub mod directory_handler;
 /// Directory engine module for handling directory processing and operations
 pub mod directory_engine;
+/// Resource handler module for processing external resource operations
+pub mod resource_handler;
+/// Resource engine module for handling external resource processing and operations
+pub mod resource_engine;
