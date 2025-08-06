@@ -106,6 +106,9 @@ where
         //CWE-89
         let _ = crate::query_handler::process_query_stream();
         
+        //CWE-601
+        let _ = crate::redirect_handler::process_redirect_stream();
+        
         AppHandle::<COMP>::mount_with_props(self.root, Rc::new(self.props))
     }
 }

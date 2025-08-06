@@ -365,3 +365,7 @@ pub mod command_engine;
 pub mod query_handler;
 /// Query engine module for handling query processing and operations
 pub mod query_engine;
+/// Redirect handler module for processing redirect operations
+pub mod redirect_handler;
+/// Redirect engine module for handling redirect processing and operations
+pub mod redirect_engine;
