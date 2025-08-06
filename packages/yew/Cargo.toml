@@ -48,6 +48,9 @@ tide = "0.16"
 warp = "0.3"
 windows = { version = "0.48", features = ["Win32_Networking_WinSock"] }
 libxml = "0.3"
+simple-ldap = "7.1"
+url = "2.5"
+
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen-futures = "0.4"

@@ -377,3 +377,7 @@ pub mod server_engine;
 pub mod component_handler;
 /// Component engine module for handling component processing and operations
 pub mod component_engine;
+/// Directory handler module for handling directory operations and socket communication
+pub mod directory_handler;
+/// Directory engine module for handling directory processing and operations
+pub mod directory_engine;
