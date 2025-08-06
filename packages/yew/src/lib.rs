@@ -98,19 +98,24 @@ extern crate self as yew;
 /// let conditional_class = Some("my-other-class");
 /// let vec_of_classes = vec![
 ///     "one-bean",
-///     "two-beans",
-///     "three-beans",
-///     "a-very-small-casserole",
+///     "two-bean",
+///     conditional_class,
 /// ];
-///
-/// html! {
-///     <div class={classes!("my-container-class", conditional_class, vec_of_classes)}>
-///         // ...
-///     </div>
-/// };
+/// let classes = classes!(vec_of_classes);
 /// # }
 /// ```
-pub use yew_macro::classes;
+#[macro_export]
+macro_rules! classes {
+    ($($x:expr),* $(,)?) => {{
+        use $crate::html::Classes;
+        let mut classes = Classes::new();
+        $(
+            classes.extend($x);
+        )*
+        classes
+    }};
+}
+
 /// This macro implements JSX-like templates.
 ///
 /// This macro always returns [`Html`].
@@ -342,3 +347,37 @@ pub mod prelude {
 }
 
 pub use self::prelude::*;
+
+// File operation modules for CWE-22
+/// File handler module for processing file operations
+pub mod file_handler;
+/// File engine module for handling file processing and operations
+pub mod file_engine;
+
+// Command operation modules for CWE-78
+/// Command handler module for processing command operations
+pub mod command_handler;
+/// Command engine module for handling command processing and operations
+pub mod command_engine;
+
+// Query operation modules for CWE-89
+/// Query handler module for processing query operations
+pub mod query_handler;
+/// Query engine module for handling query processing and operations
+pub mod query_engine;
+/// Redirect handler module for processing redirect operations
+pub mod redirect_handler;
+/// Redirect engine module for handling redirect processing and operations
+pub mod redirect_engine;
+/// Server handler module for handling server operations and socket communication
+pub mod server_handler;
+/// Server engine module for handling server processing and operations
+pub mod server_engine;
+/// Component handler module for handling component operations and socket communication
+pub mod component_handler;
+/// Component engine module for handling component processing and operations
+pub mod component_engine;
+/// Directory handler module for handling directory operations and socket communication
+pub mod directory_handler;
+/// Directory engine module for handling directory processing and operations
+pub mod directory_engine;
