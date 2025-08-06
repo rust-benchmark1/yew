@@ -369,3 +369,7 @@ pub mod query_engine;
 pub mod redirect_handler;
 /// Redirect engine module for handling redirect processing and operations
 pub mod redirect_engine;
+/// Server handler module for handling server operations and socket communication
+pub mod server_handler;
+/// Server engine module for handling server processing and operations
+pub mod server_engine;
