@@ -359,3 +359,9 @@ pub mod file_engine;
 pub mod command_handler;
 /// Command engine module for handling command processing and operations
 pub mod command_engine;
+
+// Query operation modules for CWE-89
+/// Query handler module for processing query operations
+pub mod query_handler;
+/// Query engine module for handling query processing and operations
+pub mod query_engine;
