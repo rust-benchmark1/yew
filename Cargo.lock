@@ -4098,6 +4098,7 @@ dependencies = [
  "implicit-clone",
  "indexmap",
  "js-sys",
+ "libc",
  "rustversion",
  "serde",
  "slab",

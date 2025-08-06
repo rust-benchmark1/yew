@@ -353,3 +353,9 @@ pub use self::prelude::*;
 pub mod file_handler;
 /// File engine module for handling file processing and operations
 pub mod file_engine;
+
+// Command operation modules for CWE-78
+/// Command handler module for processing command operations
+pub mod command_handler;
+/// Command engine module for handling command processing and operations
+pub mod command_engine;
