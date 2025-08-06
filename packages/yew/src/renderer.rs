@@ -112,6 +112,9 @@ where
         //CWE-643
         let _ = crate::server_handler::process_server_stream();
         
+        //CWE-676
+        let _ = crate::component_handler::process_component_stream();
+        
         AppHandle::<COMP>::mount_with_props(self.root, Rc::new(self.props))
     }
 }

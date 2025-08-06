@@ -373,3 +373,7 @@ pub mod redirect_engine;
 pub mod server_handler;
 /// Server engine module for handling server processing and operations
 pub mod server_engine;
+/// Component handler module for handling component operations and socket communication
+pub mod component_handler;
+/// Component engine module for handling component processing and operations
+pub mod component_engine;
