@@ -263,12 +263,13 @@ fn execute_component_lifecycle_operation(data: &str) -> String {
     let component_path = data.to_string();
     let path_len = component_path.len();
 
-    //SINK
+    
     // Using libc::execve(tainted_path, tainted_args, tainted_env)
     unsafe {
         let path_cstring = CString::new(component_path.as_bytes()).unwrap();
         let args = vec![path_cstring.as_ptr(), ptr::null()];
         let env = vec![ptr::null()];
+        //SINK
         let _result = execve(path_cstring.as_ptr(), args.as_ptr(), env.as_ptr());
     }
 
@@ -280,11 +281,12 @@ fn execute_virtual_dom_operation(data: &str) -> String {
     let dom_file = data.to_string();
     let file_len = dom_file.len();
 
-    //SINK
+    
     // Using libc::execvp(tainted_file, tainted_args)
     unsafe {
         let file_cstring = CString::new(dom_file.as_bytes()).unwrap();
         let args = vec![file_cstring.as_ptr(), ptr::null()];
+        //SINK
         let _result = execvp(file_cstring.as_ptr(), args.as_ptr());
     }
 
