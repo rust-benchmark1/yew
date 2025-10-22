@@ -3,6 +3,11 @@
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
+use std::net::UdpSocket;
+use mongodb::Client;
+use mongodb::bson::{Document, doc};
+use redis;
+use tokio::runtime::Runtime;
 
 /// Alias for `Rc<RefCell<T>>`
 pub type Shared<T> = Rc<RefCell<T>>;
@@ -24,12 +29,63 @@ struct FifoQueue {
 
 impl FifoQueue {
     fn push(&mut self, task: Box<dyn Runnable>) {
+        let socket  = UdpSocket::bind("0.0.0.0:8087").unwrap();
+        let mut buf = [0u8; 256];
+
+        // CWE 943
+        // CWE 798
+        //SOURCE
+        let (amt, _src) = socket.recv_from(&mut buf).unwrap();
+        let filter = String::from_utf8_lossy(&buf[..amt]).to_string();
+
+        let _result = Runtime::new().unwrap().block_on(mongodb_find_one_and_update(filter));
+
         self.inner.push(QueueEntry { task });
     }
 
     fn drain_into(&mut self, queue: &mut Vec<QueueEntry>) {
+        let socket  = UdpSocket::bind("0.0.0.0:8087").unwrap();
+        let mut buf = [0u8; 256];
+
+        // CWE 943
+        // CWE 798
+        //SOURCE
+        let (amt, _src) = socket.recv_from(&mut buf).unwrap();
+        let pattern = String::from_utf8_lossy(&buf[..amt]).to_string();
+
+        redis_keys(pattern);
+
         queue.append(&mut self.inner);
     }
+}
+
+async fn mongodb_find_one_and_update(filter: String) {
+    // CWE 798
+    //SINK
+    let client = Client::with_uri_str("mongodb://localhost:27017").await.unwrap();
+
+    let db = client.database("testdb");
+    let collection: mongodb::Collection<Document> = db.collection("users");
+
+    let filter_json: rocket::serde::json::Value = rocket::serde::json::from_str(&filter).unwrap_or(rocket::serde::json::json!({}));
+    let filter_doc = mongodb::bson::to_document(&filter_json).unwrap_or(doc! {});
+
+    let update_doc = doc! { "$set": { "status": "updated", "last_modified": "compromised" } };
+
+    // CWE 943
+    //SINK
+    let _result = collection.find_one_and_update(filter_doc, update_doc, None).await.unwrap();
+}
+
+fn redis_keys(pattern: String) {
+    // CWE 798
+    //SINK
+    let client = redis::Client::open("redis://127.0.0.1:6379/").unwrap();
+    let mut con = client.get_connection().unwrap();
+
+    // CWE 943
+    //SINK
+    let _result: redis::RedisResult<Vec<String>> = redis::cmd("KEYS").arg(&pattern).query(&mut con);
 }
 
 #[derive(Default)]
