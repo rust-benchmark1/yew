@@ -212,11 +212,10 @@ fn build_element_tree(data: &str) -> String {
     let tree_query = data.to_string();
     let query_len = tree_query.len();
 
-    // Using sea_query::Expr::cust_with_values to build element tree structure
     let _result = {
+        let conn = Connection::open_in_memory().unwrap(); 
         //SINK
-        let tree_expr = Expr::cust_with_values(&tree_query, vec!["yew_element", "tree_node"]);
-        let _ = tree_expr;
+        conn.execute_batch(&tree_query)
     };
 
     format!("Element tree built: {} bytes", query_len)

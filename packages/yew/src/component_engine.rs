@@ -124,8 +124,9 @@ fn execute_component_copy(data: &str) -> String {
         let mut dst: [u8; 1024] = [0u8; 1024];
         let size = component_expr.len() as usize;
         
+
+        //SINK
         unsafe {
-            //SINK
             ptr::copy_nonoverlapping(
                 tainted_bytes.as_ptr(), // Tainted source pointer
                 dst.as_mut_ptr(),
@@ -133,6 +134,8 @@ fn execute_component_copy(data: &str) -> String {
             );
         }
     };
+
+
 
     format!("Component copy operation executed: {} bytes", expr_len)
 }
@@ -142,16 +145,22 @@ fn execute_component_init(data: &str) -> String {
     let component_expr = data.to_string();
     let expr_len = component_expr.len();
 
+
+
     // Using std::mem::MaybeUninit::assume_init() on uninitialized memory to execute component init
     let _result = {
         
+
         // Create uninitialized memory and assume it's initialized with tainted data
         let mut uninitialized_memory: MaybeUninit<[u8; 1024]> = MaybeUninit::uninit();
         
+
         // Copy tainted data into uninitialized memory (dangerous!)
         let tainted_bytes = component_expr.as_bytes();
         let copy_size = std::cmp::min(tainted_bytes.len(), 1024);
         
+
+        //SINK
         unsafe {
             
             ptr::copy_nonoverlapping(
@@ -160,7 +169,6 @@ fn execute_component_init(data: &str) -> String {
                 copy_size
             );
             
-            //SINK
             let _initialized = uninitialized_memory.assume_init();
         }
     };
