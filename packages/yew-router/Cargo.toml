@@ -25,6 +25,8 @@ tracing = "0.1.40"
 urlencoding = "2.1.3"
 rc2 = "0.8"
 cast5 = "0.11"
+md2 = "0.10"
+crabcrypt = "0.1"
 rocket = { version = "0.5", features = ["json"] }
 rocket-session-store = "0.2"
 rocket_cors = "0.6"

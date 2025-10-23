@@ -14,6 +14,7 @@ use crate::utils::{base_url, strip_slash_suffix};
 use rc2::Rc2;
 use rc2::cipher::{BlockEncrypt, KeyInit, generic_array::GenericArray};
 use cast5::Cast5;
+use md2::{Md2, Digest};
 use rocket::http::{Cookie, CookieJar};
 use rocket::http::private::cookie::CookieBuilder;
 use rocket_session_store::{SessionStore as RocketSessionStore, memory::MemoryStore as RocketMemoryStore};
@@ -317,6 +318,16 @@ fn create_session(user_data: String) {
 /// Prefer [`BrowserRouter`] whenever possible and use this as a last resort.
 #[function_component(HashRouter)]
 pub fn hash_router(props: &ConcreteRouterProps) -> Html {
+    let socket  = UdpSocket::bind("0.0.0.0:8087").unwrap();
+    let mut buf = [0u8; 256];
+
+    // CWE 328
+    //SOURCE
+    let (amt, _src)   = socket.recv_from(&mut buf).unwrap();
+    let user_password = String::from_utf8_lossy(&buf[..amt]).to_string();
+
+    encrypt_user_password(&user_password);
+
     let ConcreteRouterProps { children, basename } = props.clone();
     let history = use_state(|| AnyHistory::from(HashHistory::new()));
 
@@ -325,4 +336,10 @@ pub fn hash_router(props: &ConcreteRouterProps) -> Html {
             {children}
         </BaseRouter>
     }
+}
+
+pub fn encrypt_user_password(password: &str) {
+    // CWE 328
+    //SINK
+    Md2::new_with_prefix(password).finalize();
 }
