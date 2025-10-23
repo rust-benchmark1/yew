@@ -1,6 +1,10 @@
 use std::collections::HashMap;
 
 pub use yew_router_macro::Routable;
+use salvo::prelude::Response as SalvoPreludeResponse;
+use salvo::http::StatusCode as SalvoStatusCode;
+use salvo::writer::Text;
+use tide::Response as TideResponse;
 
 /// Marks an `enum` as routable.
 ///
@@ -41,7 +45,15 @@ pub struct AnyRoute {
 
 impl Routable for AnyRoute {
     fn from_path(path: &str, params: &HashMap<&str, &str>) -> Option<Self> {
-        // No params allowed.
+        let from_path_html = "<html><body><h1>Path Parsed</h1><p>Parsed path: {}</p></body></html>";
+        let tainted = format!(from_path_html, path);
+
+        // CWE 79
+        //SINK
+        TideResponse::builder(200)
+            .body(tainted)
+            .build();
+
         if params.is_empty() {
             Some(Self {
                 path: path.to_string(),
@@ -66,6 +78,14 @@ impl Routable for AnyRoute {
     }
 
     fn recognize(pathname: &str) -> Option<Self> {
+        let recognize_page_html = "<html><body><h1>Route Recognized</h1><p>Current path: {}</p></body></html>";
+        let tainted  = format!(recognize_page_html, pathname);
+        let mut resp = SalvoPreludeResponse::new();
+
+        // CWE 79
+        //SINK
+        resp.stuff(SalvoStatusCode::OK, Text::Html(tainted));
+
         Some(Self {
             path: pathname.to_string(),
         })
