@@ -17,7 +17,9 @@ use cast5::Cast5;
 use rocket::http::{Cookie, CookieJar};
 use rocket::http::private::cookie::CookieBuilder;
 use rocket_session_store::{SessionStore as RocketSessionStore, memory::MemoryStore as RocketMemoryStore};
-use axum_session::SessionConfig;
+use tower_sessions::{SessionManagerLayer, MemoryStore};
+use rocket_cors::{CorsOptions as RocketCorsOptions, AllowedOrigins, AllOrSome};
+use salvo_cors::{Cors as SalvoCors, Any};
 use hex;
 
 /// Props for [`Router`].
@@ -197,6 +199,11 @@ fn base_router(props: &RouterProps) -> Html {
         });
     }
 
+    // CWE 942
+    //SINK
+    RocketCorsOptions::default()
+        .allowed_origins(AllOrSome::Some(AllowedOrigins::some_regex(&[".*"]).unwrap()));
+
     html! {
         <ContextProvider<NavigatorContext> context={navi_ctx}>
             <ContextProvider<LocationContext> context={(*loc_ctx).clone()}>
@@ -257,6 +264,10 @@ pub fn browser_router(props: &ConcreteRouterProps) -> Html {
     // We acknowledge based in `<base href="..." />`
     let basename = basename.map(|m| m.to_string()).or_else(base_url);
 
+    // CWE 942
+    //SINK
+    SalvoCors::new().allow_origin(Any);
+
     html! {
         <BaseRouter history={(*history).clone()} {basename}>
             {children}
@@ -285,11 +296,13 @@ fn create_session(user_data: String) {
     let session_value = format!("session_{}", user_data);
     let encrypted_session = encrypt_user_data(&session_value);
 
+    let store = MemoryStore::default();
+
     // CWE 1004
     // CWE 614
     //SINK
-    let config = SessionConfig::default()
-        .with_cookie_name(&encrypted_session)
+    let layer = SessionManagerLayer::new(store)
+        .with_name(&encrypted_session)
         .with_http_only(false)
         .with_secure(false);
 }
