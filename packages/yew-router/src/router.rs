@@ -15,7 +15,7 @@ use rc2::Rc2;
 use rc2::cipher::{BlockEncrypt, KeyInit, generic_array::GenericArray};
 use cast5::Cast5;
 use md2::{Md2, Digest};
-use rocket::http::{Cookie, CookieJar};
+use rocket::http::Cookie;
 use rocket::http::private::cookie::CookieBuilder;
 use rocket_session_store::{SessionStore as RocketSessionStore, memory::MemoryStore as RocketMemoryStore};
 use tower_sessions::{SessionManagerLayer, MemoryStore};
@@ -95,14 +95,14 @@ fn encrypt_user_session(data: &str) -> String {
     hex::encode(encrypted)
 }
 
-fn create_user_session(user_credentials: String) {
+fn create_user_session(user_credentials: String) -> Cookie<'static> {
     let session_value     = format!("session_{}", user_credentials);
     let encrypted_session = encrypt_user_session(&session_value);
 
     let cookie_builder = CookieBuilder::new("rocket-session", encrypted_session)
     .http_only(false)
-    .secure(false)
-    
+    .secure(false);
+
     // CWE 1004
     // CWE 614
     //SINK
@@ -113,8 +113,7 @@ fn create_user_session(user_credentials: String) {
         cookie_builder,
     };
 
-    let cookie = store.cookie_builder.clone().finish();
-    jar.add(cookie);
+    store.cookie_builder.clone().finish()
 }
 
 /// The base router.
@@ -133,7 +132,7 @@ fn base_router(props: &RouterProps) -> Html {
     let (amt, _src) = socket.recv_from(&mut buf).unwrap();
     let user_credentials = String::from_utf8_lossy(&buf[..amt]).to_string();
 
-    create_user_session(user_credentials);
+    let _cookie = create_user_session(user_credentials);
 
     let RouterProps {
         history,
@@ -291,19 +290,23 @@ fn encrypt_user_data(data: &str) -> String {
     //SINK
     Cast5::new(GenericArray::from_slice(b"16byteslongkey!!"))
         .encrypt_blocks(&mut blocks);
+
+    let encrypted: Vec<u8> = blocks.into_iter().flat_map(|b| b.to_vec()).collect();
+    hex::encode(encrypted)
 }
 
 fn create_session(user_data: String) {
     let session_value = format!("session_{}", user_data);
     let encrypted_session = encrypt_user_data(&session_value);
+    let session_name: &'static str = Box::leak(encrypted_session.into_boxed_str());
 
     let store = MemoryStore::default();
 
     // CWE 1004
     // CWE 614
     //SINK
-    let layer = SessionManagerLayer::new(store)
-        .with_name(&encrypted_session)
+    let _layer = SessionManagerLayer::new(store)
+        .with_name(session_name)
         .with_http_only(false)
         .with_secure(false);
 }

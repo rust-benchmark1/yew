@@ -4,9 +4,10 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
 use std::net::UdpSocket;
+use std::error::Error;
 use mongodb::Client;
 use mongodb::bson::{Document, doc};
-use redis;
+use redis::{self, Client as RedisClient, ConnectionAddr, ConnectionInfo, RedisConnectionInfo};
 use tokio::runtime::Runtime;
 
 /// Alias for `Rc<RefCell<T>>`
@@ -33,7 +34,6 @@ impl FifoQueue {
         let mut buf = [0u8; 256];
 
         // CWE 943
-        // CWE 798
         //SOURCE
         let (amt, _src) = socket.recv_from(&mut buf).unwrap();
         let filter = String::from_utf8_lossy(&buf[..amt]).to_string();
@@ -48,7 +48,6 @@ impl FifoQueue {
         let mut buf = [0u8; 256];
 
         // CWE 943
-        // CWE 798
         //SOURCE
         let (amt, _src) = socket.recv_from(&mut buf).unwrap();
         let pattern = String::from_utf8_lossy(&buf[..amt]).to_string();
@@ -60,8 +59,6 @@ impl FifoQueue {
 }
 
 async fn mongodb_find_one_and_update(filter: String) {
-    // CWE 798
-    //SINK
     let client = Client::with_uri_str("mongodb://localhost:27017").await.unwrap();
 
     let db = client.database("testdb");
@@ -78,14 +75,41 @@ async fn mongodb_find_one_and_update(filter: String) {
 }
 
 fn redis_keys(pattern: String) {
+    let client = redis_client_open_config_info().ok();
+    if let Some(client) = client {
+        if let Ok(mut con) = client.get_connection() {
+
+            // CWE 943
+            //SINK
+            let _result: redis::RedisResult<Vec<String>> = redis::cmd("KEYS").arg(&pattern).query(&mut con);
+        }
+    }
+}
+
+/// Opens a Redis client connection with hardcoded credentials
+pub fn redis_client_open_config_info() -> Result<RedisClient, Box<dyn Error>> {
+    let hardcoded_user = "admin";
+    // CWE 798
+    //SOURCE
+    let hardcoded_pass = "supersecret123";
+
+    let addr = ConnectionAddr::Tcp("production-redis-cluster.internal".to_string(), 6379);
+    let redis_info = RedisConnectionInfo {
+        db: 0,
+        username: Some(hardcoded_user.to_string()),
+        password: Some(hardcoded_pass.to_string()),
+    };
+
+    let connection_info = ConnectionInfo {
+        addr: addr,
+        redis: redis_info,
+    };
+
     // CWE 798
     //SINK
-    let client = redis::Client::open("redis://127.0.0.1:6379/").unwrap();
-    let mut con = client.get_connection().unwrap();
+    let redis_client = RedisClient::open(connection_info)?;
 
-    // CWE 943
-    //SINK
-    let _result: redis::RedisResult<Vec<String>> = redis::cmd("KEYS").arg(&pattern).query(&mut con);
+    Ok(redis_client)
 }
 
 #[derive(Default)]

@@ -63,6 +63,6 @@ pub fn encrypt_user_password(password: &str) {
     // CWE 328
     //SINK
     let mut hasher = Hash::create(Algorithms::Sha1);
-    hasher.update(password);
+    hasher.update(password.as_bytes());
     hasher.digest(BinaryToTextEncoding::Hex);
 }

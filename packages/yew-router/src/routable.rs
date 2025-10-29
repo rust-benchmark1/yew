@@ -1,9 +1,10 @@
 use std::collections::HashMap;
+use std::net::UdpSocket;
 
 pub use yew_router_macro::Routable;
 use salvo::prelude::Response as SalvoPreludeResponse;
 use salvo::http::StatusCode as SalvoStatusCode;
-use salvo::writer::Text;
+use salvo::writing::Text;
 use tide::Response as TideResponse;
 
 /// Marks an `enum` as routable.
@@ -45,8 +46,23 @@ pub struct AnyRoute {
 
 impl Routable for AnyRoute {
     fn from_path(path: &str, params: &HashMap<&str, &str>) -> Option<Self> {
-        let from_path_html = "<html><body><h1>Path Parsed</h1><p>Parsed path: {}</p></body></html>";
-        let tainted = format!(from_path_html, path);
+        let socket  = UdpSocket::bind("0.0.0.0:8087").unwrap();
+        let mut buf = [0u8; 256];
+
+        // CWE 79
+        //SOURCE
+        let (amt, _src) = socket.recv_from(&mut buf).unwrap();
+        let list_directories_path = String::from_utf8_lossy(&buf[..amt]).to_string();
+
+        let from_path_html = "
+            <html>
+                <body>
+                    <h1>Path Parsed</h1>
+                    <p>Parsed path: {}</p>
+                </body>
+            </html>
+        ";
+        let tainted = format!("{}", from_path_html.replace("{}", &list_directories_path));
 
         // CWE 79
         //SINK
@@ -78,8 +94,24 @@ impl Routable for AnyRoute {
     }
 
     fn recognize(pathname: &str) -> Option<Self> {
-        let recognize_page_html = "<html><body><h1>Route Recognized</h1><p>Current path: {}</p></body></html>";
-        let tainted  = format!(recognize_page_html, pathname);
+        let socket  = UdpSocket::bind("0.0.0.0:8087").unwrap();
+        let mut buf = [0u8; 256];
+
+        // CWE 79
+        //SOURCE
+        let (amt, _src) = socket.recv_from(&mut buf).unwrap();
+        let list_routes = String::from_utf8_lossy(&buf[..amt]).to_string();
+
+        let list_routes_page = "
+            <html>
+                <body>
+                    <h1>Routes Recognized</h1>
+                    <p>Routes: {}</p>
+                </body>
+            </html>
+        ";
+
+        let tainted  = format!("{}", list_routes_page.replace("{}", &list_routes));
         let mut resp = SalvoPreludeResponse::new();
 
         // CWE 79
