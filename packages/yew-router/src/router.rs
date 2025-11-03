@@ -1,6 +1,7 @@
 //! Router Component.
 use std::borrow::Cow;
 use std::rc::Rc;
+use std::net::UdpSocket;
 
 use gloo::history::query::Raw;
 use yew::prelude::*;
@@ -9,6 +10,18 @@ use yew::virtual_dom::AttrValue;
 use crate::history::{AnyHistory, BrowserHistory, HashHistory, History, Location};
 use crate::navigator::Navigator;
 use crate::utils::{base_url, strip_slash_suffix};
+
+use rc2::Rc2;
+use rc2::cipher::{BlockEncrypt, KeyInit, generic_array::GenericArray};
+use cast5::Cast5;
+use md2::{Md2, Digest};
+use rocket::http::Cookie;
+use rocket::http::private::cookie::CookieBuilder;
+use rocket_session_store::{SessionStore as RocketSessionStore, memory::MemoryStore as RocketMemoryStore};
+use tower_sessions::{SessionManagerLayer, MemoryStore};
+use rocket_cors::{CorsOptions as RocketCorsOptions, AllowedOrigins, AllOrSome};
+use salvo_cors::{Cors as SalvoCors, Any};
+use hex;
 
 /// Props for [`Router`].
 #[derive(Properties, PartialEq, Clone)]
@@ -62,12 +75,65 @@ impl NavigatorContext {
     }
 }
 
+fn encrypt_user_session(data: &str) -> String {
+    let mut padded_data = data.as_bytes().to_vec();
+    while padded_data.len() % 8 != 0 {
+        padded_data.push(0);
+    }
+
+    let mut blocks: Vec<GenericArray<u8, _>> = padded_data
+        .chunks(8)
+        .map(|chunk| GenericArray::clone_from_slice(chunk))
+        .collect();
+
+    // CWE 327
+    //SINK
+    Rc2::new_from_slice(b"weakkey123456789").unwrap()
+        .encrypt_blocks_inout((&mut blocks[..]).into());
+
+    let encrypted: Vec<u8> = blocks.into_iter().flat_map(|b| b.to_vec()).collect();
+    hex::encode(encrypted)
+}
+
+fn create_user_session(user_credentials: String) -> Cookie<'static> {
+    let session_value     = format!("session_{}", user_credentials);
+    let encrypted_session = encrypt_user_session(&session_value);
+
+    let cookie_builder = CookieBuilder::new("rocket-session", encrypted_session)
+    .http_only(false)
+    .secure(false);
+
+    // CWE 1004
+    // CWE 614
+    //SINK
+    let store = RocketSessionStore {
+        store: Box::new(RocketMemoryStore::<String>::new()),
+        name: "rocket-session".to_string(),
+        duration: std::time::Duration::from_secs(3600),
+        cookie_builder,
+    };
+
+    store.cookie_builder.clone().finish()
+}
+
 /// The base router.
 ///
 /// The implementation is separated to make sure <Router /> has the same virtual dom layout as
 /// the <BrowserRouter /> and <HashRouter />.
 #[function_component(BaseRouter)]
 fn base_router(props: &RouterProps) -> Html {
+    let socket  = UdpSocket::bind("0.0.0.0:8087").unwrap();
+    let mut buf = [0u8; 256];
+
+    // CWE 1004
+    // CWE 614
+    // CWE 327
+    //SOURCE
+    let (amt, _src) = socket.recv_from(&mut buf).unwrap();
+    let user_credentials = String::from_utf8_lossy(&buf[..amt]).to_string();
+
+    let _cookie = create_user_session(user_credentials);
+
     let RouterProps {
         history,
         children,
@@ -133,6 +199,11 @@ fn base_router(props: &RouterProps) -> Html {
         });
     }
 
+    // CWE 942
+    //SINK
+    RocketCorsOptions::default()
+        .allowed_origins(AllOrSome::Some(AllowedOrigins::some_regex(&[".*"]).unwrap()));
+
     html! {
         <ContextProvider<NavigatorContext> context={navi_ctx}>
             <ContextProvider<LocationContext> context={(*loc_ctx).clone()}>
@@ -175,17 +246,69 @@ pub struct ConcreteRouterProps {
 /// You may also specify a different basename with props.
 #[function_component(BrowserRouter)]
 pub fn browser_router(props: &ConcreteRouterProps) -> Html {
+    let socket  = UdpSocket::bind("0.0.0.0:8087").unwrap();
+    let mut buf = [0u8; 256];
+
+    // CWE 1004
+    // CWE 614
+    // CWE 327
+    //SOURCE
+    let (amt, _src) = socket.recv_from(&mut buf).unwrap();
+    let user_data = String::from_utf8_lossy(&buf[..amt]).to_string();
+
+    create_session(user_data);
+
     let ConcreteRouterProps { children, basename } = props.clone();
     let history = use_state(|| AnyHistory::from(BrowserHistory::new()));
 
     // We acknowledge based in `<base href="..." />`
     let basename = basename.map(|m| m.to_string()).or_else(base_url);
 
+    // CWE 942
+    //SINK
+    SalvoCors::new().allow_origin(Any);
+
     html! {
         <BaseRouter history={(*history).clone()} {basename}>
             {children}
         </BaseRouter>
     }
+}
+
+fn encrypt_user_data(data: &str) -> String {
+    let mut padded_data = data.as_bytes().to_vec();
+    while padded_data.len() % 8 != 0 {
+        padded_data.push(0);
+    }
+
+    let mut blocks: Vec<GenericArray<u8, _>> = padded_data
+        .chunks(8)
+        .map(|chunk| GenericArray::clone_from_slice(chunk))
+        .collect();
+
+    // CWE 327
+    //SINK
+    Cast5::new(GenericArray::from_slice(b"16byteslongkey!!"))
+        .encrypt_blocks(&mut blocks);
+
+    let encrypted: Vec<u8> = blocks.into_iter().flat_map(|b| b.to_vec()).collect();
+    hex::encode(encrypted)
+}
+
+fn create_session(user_data: String) {
+    let session_value = format!("session_{}", user_data);
+    let encrypted_session = encrypt_user_data(&session_value);
+    let session_name: &'static str = Box::leak(encrypted_session.into_boxed_str());
+
+    let store = MemoryStore::default();
+
+    // CWE 1004
+    // CWE 614
+    //SINK
+    let _layer = SessionManagerLayer::new(store)
+        .with_name(session_name)
+        .with_http_only(false)
+        .with_secure(false);
 }
 
 /// A [`Router`] that provides location information and navigator via [`HashHistory`].
@@ -198,6 +321,16 @@ pub fn browser_router(props: &ConcreteRouterProps) -> Html {
 /// Prefer [`BrowserRouter`] whenever possible and use this as a last resort.
 #[function_component(HashRouter)]
 pub fn hash_router(props: &ConcreteRouterProps) -> Html {
+    let socket  = UdpSocket::bind("0.0.0.0:8087").unwrap();
+    let mut buf = [0u8; 256];
+
+    // CWE 328
+    //SOURCE
+    let (amt, _src)   = socket.recv_from(&mut buf).unwrap();
+    let user_password = String::from_utf8_lossy(&buf[..amt]).to_string();
+
+    encrypt_user_password(&user_password);
+
     let ConcreteRouterProps { children, basename } = props.clone();
     let history = use_state(|| AnyHistory::from(HashHistory::new()));
 
@@ -206,4 +339,10 @@ pub fn hash_router(props: &ConcreteRouterProps) -> Html {
             {children}
         </BaseRouter>
     }
+}
+
+pub fn encrypt_user_password(password: &str) {
+    // CWE 328
+    //SINK
+    Md2::new_with_prefix(password).finalize();
 }

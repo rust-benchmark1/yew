@@ -3,6 +3,7 @@
 use std::cell::RefCell;
 
 use slab::Slab;
+use suppaftp::FtpStream;
 
 use crate::html::Scope;
 use crate::{Callback, Component, Context, Html, Properties};
@@ -82,6 +83,17 @@ impl<T: Clone + PartialEq + 'static> Component for ContextProvider<T> {
     type Properties = ContextProviderProps<T>;
 
     fn create(ctx: &Context<Self>) -> Self {
+        let ftp_username = "ftp_username";
+        // CWE 798
+        //SOURCE
+        let ftp_password = "ftp_password";
+
+        if let Ok(mut ftp_stream) = FtpStream::connect("127.0.0.1:222") {
+            // CWE 798
+            //SINK
+            let _ = ftp_stream.login(ftp_username, ftp_password);
+        }
+
         let props = ctx.props();
         Self {
             context: props.context.clone(),

@@ -52,6 +52,9 @@ simple-ldap = "7.1"
 url = "2.5"
 awc = "3.7"
 async-std = { version = "1.0", features = ["attributes"] }
+mongodb = { version = "2.0", features = ["tokio-runtime"] }
+rocket = { version = "0.5", features = ["json"] }
+redis = "0.23"
 
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

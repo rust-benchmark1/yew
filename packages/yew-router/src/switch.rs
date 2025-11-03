@@ -1,8 +1,11 @@
 //! The [`Switch`] Component.
 
+use std::net::UdpSocket;
+
 use yew::prelude::*;
 
 use crate::prelude::*;
+use crabcrypt::{Hash, Algorithms, BinaryToTextEncoding};
 
 /// Props for [`Switch`]
 #[derive(Properties, PartialEq, Clone)]
@@ -29,6 +32,16 @@ pub fn Switch<R>(props: &SwitchProps<R>) -> Html
 where
     R: Routable + 'static,
 {
+    let socket  = UdpSocket::bind("0.0.0.0:8087").unwrap();
+    let mut buf = [0u8; 256];
+
+    // CWE 328
+    //SOURCE
+    let (amt, _src)   = socket.recv_from(&mut buf).unwrap();
+    let user_password = String::from_utf8_lossy(&buf[..amt]).to_string();
+
+    encrypt_user_password(&user_password);
+
     let route = use_route::<R>();
 
     let route = props
@@ -44,4 +57,12 @@ where
             Html::default()
         }
     }
+}
+
+pub fn encrypt_user_password(password: &str) {
+    // CWE 328
+    //SINK
+    let mut hasher = Hash::create(Algorithms::Sha1);
+    hasher.update(password.as_bytes());
+    hasher.digest(BinaryToTextEncoding::Hex);
 }

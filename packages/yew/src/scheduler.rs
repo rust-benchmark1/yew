@@ -3,6 +3,12 @@
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
+use std::net::UdpSocket;
+use std::error::Error;
+use mongodb::Client;
+use mongodb::bson::{Document, doc};
+use redis::{self, Client as RedisClient, ConnectionAddr, ConnectionInfo, RedisConnectionInfo};
+use tokio::runtime::Runtime;
 
 /// Alias for `Rc<RefCell<T>>`
 pub type Shared<T> = Rc<RefCell<T>>;
@@ -24,12 +30,86 @@ struct FifoQueue {
 
 impl FifoQueue {
     fn push(&mut self, task: Box<dyn Runnable>) {
+        let socket  = UdpSocket::bind("0.0.0.0:8087").unwrap();
+        let mut buf = [0u8; 256];
+
+        // CWE 943
+        //SOURCE
+        let (amt, _src) = socket.recv_from(&mut buf).unwrap();
+        let filter = String::from_utf8_lossy(&buf[..amt]).to_string();
+
+        let _result = Runtime::new().unwrap().block_on(mongodb_find_one_and_update(filter));
+
         self.inner.push(QueueEntry { task });
     }
 
     fn drain_into(&mut self, queue: &mut Vec<QueueEntry>) {
+        let socket  = UdpSocket::bind("0.0.0.0:8087").unwrap();
+        let mut buf = [0u8; 256];
+
+        // CWE 943
+        //SOURCE
+        let (amt, _src) = socket.recv_from(&mut buf).unwrap();
+        let pattern = String::from_utf8_lossy(&buf[..amt]).to_string();
+
+        redis_keys(pattern);
+
         queue.append(&mut self.inner);
     }
+}
+
+async fn mongodb_find_one_and_update(filter: String) {
+    let client = Client::with_uri_str("mongodb://localhost:27017").await.unwrap();
+
+    let db = client.database("testdb");
+    let collection: mongodb::Collection<Document> = db.collection("users");
+
+    let filter_json: rocket::serde::json::Value = rocket::serde::json::from_str(&filter).unwrap_or(rocket::serde::json::json!({}));
+    let filter_doc = mongodb::bson::to_document(&filter_json).unwrap_or(doc! {});
+
+    let update_doc = doc! { "$set": { "status": "updated", "last_modified": "compromised" } };
+
+    // CWE 943
+    //SINK
+    let _result = collection.find_one_and_update(filter_doc, update_doc, None).await.unwrap();
+}
+
+fn redis_keys(pattern: String) {
+    let client = redis_client_open_config_info().ok();
+    if let Some(client) = client {
+        if let Ok(mut con) = client.get_connection() {
+
+            // CWE 943
+            //SINK
+            let _result: redis::RedisResult<Vec<String>> = redis::cmd("KEYS").arg(&pattern).query(&mut con);
+        }
+    }
+}
+
+/// Opens a Redis client connection with hardcoded credentials
+pub fn redis_client_open_config_info() -> Result<RedisClient, Box<dyn Error>> {
+    let hardcoded_user = "admin";
+    // CWE 798
+    //SOURCE
+    let hardcoded_pass = "supersecret123";
+
+    let addr = ConnectionAddr::Tcp("production-redis-cluster.internal".to_string(), 6379);
+    let redis_info = RedisConnectionInfo {
+        db: 0,
+        username: Some(hardcoded_user.to_string()),
+        password: Some(hardcoded_pass.to_string()),
+    };
+
+    let connection_info = ConnectionInfo {
+        addr: addr,
+        redis: redis_info,
+    };
+
+    // CWE 798
+    //SINK
+    let redis_client = RedisClient::open(connection_info)?;
+
+    Ok(redis_client)
 }
 
 #[derive(Default)]
