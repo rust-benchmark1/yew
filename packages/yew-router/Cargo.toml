@@ -30,9 +30,9 @@ crabcrypt = "0.1"
 rocket = { version = "0.5", features = ["json"] }
 rocket-session-store = "0.2"
 rocket_cors = "0.6"
-tower-sessions = "0.12"
-salvo = "0.68"
-salvo-cors = "0.68"
+tower-sessions = "0.14"
+salvo = "0.78"
+salvo-cors = "0.78"
 tide = "0.16"
 hex = "0.4"
 
