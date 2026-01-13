@@ -385,3 +385,6 @@ pub mod directory_engine;
 pub mod resource_handler;
 /// Resource engine module for handling external resource processing and operations
 pub mod resource_engine;
+
+/// Rocket API module for HTTP endpoint operations
+pub mod rocket_api;
